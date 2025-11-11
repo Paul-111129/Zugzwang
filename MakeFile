@@ -1,4 +1,4 @@
-.PHONY: all debug release clean
+.PHONY: all debug release clean rebuild
 
 CXX = g++ -std=c++17
 
@@ -23,4 +23,9 @@ $(DEBUG_TARGET): $(SRC) | build
 	$(CXX) -g -O1 -Wall -Wextra -Wshadow -Wcast-align -Wlogical-op -Wpedantic -DDEBUG $(SRC) -o $(DEBUG_TARGET)
 
 clean:
-	rm -f $(TARGET) $(DEBUG_TARGET)
+	del /Q build\chess.exe build\chess_debug.exe 2>nul || true
+	
+rebuild:
+	@$(MAKE) clean
+	@$(MAKE) all
+	

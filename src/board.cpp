@@ -1,7 +1,7 @@
 #include <iostream>
 #include <algorithm>
 #include <sstream>
-#include <cassert>
+#include <cASSERT>
 #include <string>
 #include <cctype>
 
@@ -30,17 +30,17 @@ void Board::set(const std::string& fenStr) {
 
     unsigned char col, row, token;
     size_t idx;
+    Square sq = SQ_A8;
     std::istringstream ss(fenStr);
 
     ss >> std::noskipws;
 
     // 1. Piece placement
-    Square sq = SQ_A8;
     while ((ss >> token) && !isspace(token)) {
         if (isdigit(token)) {
-            sq += (token - '0') * EAST;  // Move right
+            sq += (token - '0') * EAST;
         } else if (token == '/') {
-            sq += 2 * SOUTH;  // Move down one rank
+            sq += 2 * SOUTH;
         } else if ((idx = PieceToChar.find(token)) != std::string::npos) {
             pieces[sq] = Piece(idx);
             ++sq;
@@ -50,29 +50,15 @@ void Board::set(const std::string& fenStr) {
     // 2. Active color
     ss >> token;
     sideToMove = (token == 'w' ? WHITE : BLACK);
-
-    // Skip any whitespace
-    while (ss && isspace(ss.peek()))
-        ss.get();
+    ss >> token;
 
     // 3. Castling availability
-    castlingRights = NO_CASTLING;
-    if (ss.peek() == '-') {
-        ss.get();  // skip '-'
-    } else {
-        while ((ss >> token) && !isspace(token)) {
-            Color c = islower(token) ? BLACK : WHITE;
-            token = toupper(token);
-            CastlingRights cr = NO_CASTLING;
-
-            if (token == 'K')
-                cr = (c == WHITE ? WHITE_OO : BLACK_OO);
-            else if (token == 'Q')
-                cr = (c == WHITE ? WHITE_OOO : BLACK_OOO);
-            else
-                continue;
-
-            castlingRights |= cr;
+    while ((ss >> token) && !isspace(token)) {
+        switch (token) {
+        case 'K': castlingRights |= WHITE_OO; break;
+        case 'k': castlingRights |= BLACK_OO; break;
+        case 'Q': castlingRights |= WHITE_OOO; break;
+        case 'q': castlingRights |= BLACK_OOO; break;
         }
     }
 
@@ -112,7 +98,7 @@ void Board::print() const {
 
     cout << "En passant square: ";
     if (is_ok(epSquare))
-        cout << epSquare;  // assumes helper exists
+        cout << epSquare;
     else
         cout << "none";
     cout << "\n";
@@ -121,5 +107,4 @@ void Board::print() const {
          << (castlingRights & WHITE_OOO ? "Q" : "-") << (castlingRights & BLACK_OO ? "k" : "-")
          << (castlingRights & BLACK_OOO ? "q" : "-") << "\n";
 }
-
 }  // namespace ChessCpp

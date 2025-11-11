@@ -2,7 +2,7 @@
 #define TYPES_H
 
 #include <cstdint>
-#include <cassert>
+#include <iomanip>
 
 namespace ChessCpp {
 using Bitboard = uint64_t;
@@ -82,6 +82,20 @@ ENABLE_INCR_OPERATORS_ON(Rank)
 
 #undef ENABLE_INCR_OPERATORS_ON
 
+#ifdef DEBUG
+    #define ASSERT(n)                                                                      \
+        do {                                                                               \
+            if (!(n)) {                                                                    \
+                std::cout << "Assertion failed: " << #n << "\n";                           \
+                std::cout << "In file: " << __FILE__ << ", at line: " << __LINE__ << "\n"; \
+                std::cin.get();                                                            \
+                std::exit(1);                                                              \
+            }                                                                              \
+        } while (0)
+#else
+    #define ASSERT(n) ((void) 0)
+#endif
+
 constexpr Direction operator+(Direction d1, Direction d2) { return Direction(int(d1) + int(d2)); }
 constexpr Direction operator*(int i, Direction d) { return Direction(i * int(d)); }
 
@@ -105,7 +119,7 @@ constexpr Piece make_piece(Color c, PieceType pt) { return Piece((c << 3) + pt);
 constexpr PieceType type_of(Piece pc) { return PieceType(pc & 7); }
 
 inline Color color_of(Piece pc) {
-    assert(pc != NO_PIECE);
+    ASSERT(pc != NO_PIECE);
     return Color(pc >> 3);
 }
 
@@ -123,8 +137,18 @@ constexpr Rank relative_rank(Color c, Square s) { return relative_rank(c, rank_o
 
 constexpr Direction pawn_push(Color c) { return c == WHITE ? NORTH : SOUTH; }
 
+inline std::ostream& operator<<(std::ostream& os, const Square& sq) {
+    os << char('a' + file_of(sq)) << char('1' + rank_of(sq));
+    return os;
+}
+
 enum MoveType { NORMAL, PROMOTION = 1 << 14, EN_PASSANT = 2 << 14, CASTLING = 3 << 14 };
 
+// 16 bits:
+// bit  0- 5: destination square (from 0 to 63)
+// bit  6-11: origin square (from 0 to 63)
+// bit 12-13: promotion piece type - 2 (from KNIGHT-2 to QUEEN-2)
+// bit 14-15: special move flag: promotion (1), en passant (2), castling (3)
 class Move {
     uint16_t data;
 
@@ -153,11 +177,36 @@ class Move {
     constexpr bool operator!=(const Move& m) const { return data != m.data; }
 
     constexpr uint16_t raw() const { return data; }
+
+    inline friend std::ostream& operator<<(std::ostream& os, const Move& move) {
+        os << move.from_sq() << move.to_sq();
+
+        if (move.type_of() == PROMOTION) {
+            char promoCh;
+            switch (move.promotion_type()) {
+            case KNIGHT: promoCh = 'n'; break;
+            case ROOK: promoCh = 'r'; break;
+            case BISHOP: promoCh = 'b'; break;
+            default: promoCh = 'q'; break;
+            }
+            os << promoCh;
+        }
+
+        return os;
+    }
 };
 
 struct MoveList {
-    Move list[MAX_MOVES];
+    Move moves[MAX_MOVES];
     int count = 0;
+
+    friend inline std::ostream& operator<<(std::ostream& os, const MoveList& list) {
+        for (int i = 0; i < list.count; ++i) {
+            os << std::setw(2) << i + 1 << ": " << list.moves[i] << "\n";
+        }
+        os << "Total: " << list.count << " moves.\n";
+        return os;
+    }
 };
 }  // namespace ChessCpp
 
