@@ -1,0 +1,42 @@
+AccessModifierOffset: -2
+AlignAfterOpenBracket: Align
+AlignArrayOfStructures: Right
+AlignConsecutiveBitFields: Consecutive
+AlignEscapedNewlines: Left
+AlignOperands: AlignAfterOperator
+AlignTrailingComments: true
+AllowShortCaseLabelsOnASingleLine: true
+AllowShortEnumsOnASingleLine: true
+AllowShortFunctionsOnASingleLine: true
+AllowShortNamespacesOnASingleLine: false
+BasedOnStyle: WebKit
+BinPackParameters: false
+BitFieldColonSpacing: After
+BraceWrapping:
+  AfterCaseLabel: false
+  AfterFunction: false
+  SplitEmptyFunction: false
+  SplitEmptyRecord: false
+  SplitEmptyNamespace: false
+BreakBeforeBinaryOperators: NonAssignment
+BreakBeforeBraces: Custom
+BreakConstructorInitializers: BeforeColon
+BreakStringLiterals: false
+BreakTemplateDeclarations: Yes
+ColumnLimit: 100
+Cpp11BracedListStyle: true
+IndentGotoLabels: true
+IndentPPDirectives: BeforeHash
+IndentWidth: 4
+PackConstructorInitializers: Never
+QualifierOrder: [inline, static, constexpr, const, volatile, restrict, type]
+ReflowComments: false
+SortIncludes: false
+SortUsingDeclarations: false
+SpaceAfterCStyleCast: true
+SpaceAfterTemplateKeyword: false
+SpaceBeforeCaseColon: false
+SpaceBeforeCpp11BracedList: false
+SpaceBeforeInheritanceColon: false
+SpaceInEmptyBlock: true
+SpacesBeforeTrailingComments: 2

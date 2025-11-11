@@ -1,0 +1,26 @@
+.PHONY: all debug release clean
+
+CXX = g++ -std=c++17
+
+SRC = $(wildcard src/*.cpp)
+TARGET = build/chess.exe
+DEBUG_TARGET = build/chess_debug.exe
+
+all: debug
+
+release: $(TARGET)
+
+debug: $(DEBUG_TARGET)
+
+# Ensure build directory exists
+build:
+	mkdir -p build
+
+$(TARGET): $(SRC) | build
+	$(CXX) -O2 $(SRC) -o $(TARGET)
+
+$(DEBUG_TARGET): $(SRC) | build
+	$(CXX) -g -O1 -Wall -Wextra -Wshadow -Wcast-align -Wlogical-op -Wpedantic -DDEBUG $(SRC) -o $(DEBUG_TARGET)
+
+clean:
+	rm -f $(TARGET) $(DEBUG_TARGET)
