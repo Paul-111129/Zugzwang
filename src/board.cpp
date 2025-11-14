@@ -42,7 +42,7 @@ void Board::init_zobrist() {
     }
 }
 
-void Board::generatePosKey() {
+void Board::generate_posKey() {
     for (Square i = SQ_A1; i < SQUARE_NB; ++i) {
         Piece piece = pieces[i];
         if (piece != NO_PIECE) {
@@ -69,9 +69,10 @@ void Board::reset() {
     for (int i = 0; i < 13; ++i) {
         pieceNb[i] = 0;
     }
-    
+
     byColorBB[WHITE] = byColorBB[BLACK] = 0ULL;
     kingSquare[WHITE] = kingSquare[BLACK] = SQ_NONE;
+    material[WHITE] = material[BLACK] = 0;
     sideToMove = WHITE;
     epSquare = SQ_NONE;
     rule50 = 0;
@@ -80,20 +81,20 @@ void Board::reset() {
     posKey = 0ULL;
 }
 
-void Board::updateListsBitboards() {
+void Board::update_lists_bitboards() {
     for (Square sq = SQ_A1; sq < SQUARE_NB; ++sq) {
         Piece piece = pieces[sq];
 
         if (piece != NO_PIECE) {
             Color color = color_of(piece);
-            
+            material[color] += PieceValues[type_of(piece)];
             set_bit(byColorBB[color], sq);
             pieceList[piece][pieceNb[piece]++] = sq;
         }
     }
 }
 
-void Board::set(const std::string& fenStr) {
+void Board::set(const char* fenStr) {
     reset();
 
     unsigned char col, row, token;
@@ -140,14 +141,14 @@ void Board::set(const std::string& fenStr) {
         epSquare = make_square(File(col - 'a'), Rank(row - '1'));
     }
 
-    // 5. Halfmove clock (rule50)
+    // 5. Halfmove clock
     ss >> std::skipws >> rule50 >> gamePly;
 
     // Convert from fullmove starting from 1 to internal ply count
     gamePly = std::max(2 * (gamePly - 1), 0) + (sideToMove == BLACK);
 
-    generatePosKey();
-    updateListsBitboards();
+    generate_posKey();
+    update_lists_bitboards();
 }
 
 void Board::print() const {
@@ -180,6 +181,16 @@ void Board::print() const {
          << (castlingRights & WHITE_OOO ? "Q" : "-") << (castlingRights & BLACK_OO ? "k" : "-")
          << (castlingRights & BLACK_OOO ? "q" : "-") << "\n";
     cout << "Position key: " << posKey << "\n";
+}
+
+bool Board::is_repetition() const {
+    for (int i = gamePly - rule50; i < gamePly - 1; ++i) {
+        ASSERT(i >= 0 && i < MAX_PLIES);
+        if (posKey == history[i].posKey) {
+            return true;
+        }
+    }
+    return false;
 }
 
 bool Board::do_move(const Move& move) {
@@ -254,7 +265,7 @@ bool Board::do_move(const Move& move) {
 
     gamePly++;
 
-    if (MoveGen::is_square_attacked(*this, kingSquare[~sideToMove], sideToMove)) {
+    if (is_in_check(~sideToMove)) {
         undo_move(move);
         return false;
     }
@@ -338,12 +349,12 @@ void Board::perftTest(int depth) {
         unsigned long long before = perftLealNodes;
         perft(depth - 1);
         undo_move(move);
-        std::cout << move << ": " << perftLealNodes - before << std::endl;
+        std::cout << move << ": " << perftLealNodes - before << "\n";
     }
 
     auto stop = high_resolution_clock::now();
     auto duration = duration_cast<milliseconds>(stop - start).count();
 
-    std::cout << "Total: " << perftLealNodes << " nodes in " << duration << " ms" << std::endl;
+    std::cout << "Total: " << perftLealNodes << " nodes in " << duration << " ms\n";
 }
 }  // namespace ChessCpp

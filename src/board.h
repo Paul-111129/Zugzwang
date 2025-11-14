@@ -4,8 +4,10 @@
 #include <string>
 #include "types.h"
 #include "bitboard.h"
+#include "movegen.h"
 
 namespace ChessCpp {
+class MoveGen;
 namespace Zobrist {
     inline Key psq[PIECE_NB][SQUARE_NB];
     inline Key castling[CASTLING_RIGHT_NB];
@@ -24,6 +26,8 @@ class Board {
   private:
     unsigned long long perftLealNodes;
 
+    void generate_posKey();
+    void update_lists_bitboards();
     void put_piece(Piece piece, Square sq);
     void remove_piece(Square sq);
     void move_piece(Square from, Square to);
@@ -36,6 +40,7 @@ class Board {
     Square kingSquare[COLOR_NB];
     Color sideToMove;
     Bitboard byColorBB[COLOR_NB];
+    int material[COLOR_NB];
 
     Square epSquare;
     int rule50;
@@ -46,11 +51,11 @@ class Board {
     StateInfo history[MAX_PLIES];
 
     static void init_zobrist();
-    void generatePosKey();
     void reset();
-    void updateListsBitboards();
-    void set(const std::string& fenStr);
+    void set(const char* fenStr);
     void print() const;
+    bool is_in_check(Color color) const;
+    bool is_repetition() const;
 
     bool do_move(const Move& move);
     void undo_move(const Move& move);
@@ -64,6 +69,7 @@ inline void Board::put_piece(Piece piece, Square sq) {
 
     pieces[sq] = piece;
     posKey ^= Zobrist::psq[piece][sq];
+    material[color] += PieceValues[type_of(piece)];
     pieceList[piece][pieceNb[piece]++] = sq;
     set_bit(byColorBB[color], sq);
 }
@@ -76,6 +82,7 @@ inline void Board::remove_piece(Square sq) {
     Color color = color_of(piece);
     posKey ^= Zobrist::psq[piece][sq];
     pieces[sq] = NO_PIECE;
+    material[color] -= PieceValues[type_of(piece)];
 
     clear_bit(byColorBB[color], sq);
 
@@ -107,6 +114,10 @@ inline void Board::move_piece(Square from, Square to) {
         }
     }
     ASSERT(false);
+}
+
+inline bool Board::is_in_check(Color color) const {
+    return MoveGen::is_square_attacked(*this, kingSquare[color], ~color);
 }
 }  // namespace ChessCpp
 

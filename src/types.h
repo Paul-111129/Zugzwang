@@ -3,7 +3,6 @@
 
 #include <iostream>
 #include <cstdlib>
-#include <string>
 #include <cstdint>
 #include <iomanip>
 
@@ -11,27 +10,30 @@ namespace ChessCpp {
 using Bitboard = uint64_t;
 using Key = uint64_t;
 
-const std::string START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+constexpr auto START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 constexpr int MAX_MOVES = 256;
 constexpr int MAX_PLIES = 2048;
+constexpr int INFINITY = 30000;
 
 // clang-format off
-enum PieceType {
+enum PieceType : int8_t {
     NO_PIECE_TYPE, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING,
     ALL_PIECES = 0,
     PIECE_TYPE_NB = 8
 };
 
-enum Piece {
+constexpr int PieceValues[PIECE_TYPE_NB] = {0, 100, 300, 300, 500, 900, 0};
+
+enum Piece : int8_t {
     NO_PIECE,
     W_PAWN = PAWN,     W_KNIGHT, W_BISHOP, W_ROOK, W_QUEEN, W_KING,
     B_PAWN = PAWN + 8, B_KNIGHT, B_BISHOP, B_ROOK, B_QUEEN, B_KING,
     PIECE_NB = 16
 };
 
-enum Color { WHITE, BLACK, COLOR_NB = 2 };
+enum Color : int8_t { WHITE, BLACK, COLOR_NB = 2 };
 
-enum CastlingRights {
+enum CastlingRights : int8_t {
     NO_CASTLING,
     WHITE_OO,
     WHITE_OOO = WHITE_OO << 1,
@@ -47,7 +49,7 @@ enum CastlingRights {
     CASTLING_RIGHT_NB = 16
 };
 
-enum Square : int {
+enum Square : int8_t {
     SQ_A1, SQ_B1, SQ_C1, SQ_D1, SQ_E1, SQ_F1, SQ_G1, SQ_H1,
     SQ_A2, SQ_B2, SQ_C2, SQ_D2, SQ_E2, SQ_F2, SQ_G2, SQ_H2,
     SQ_A3, SQ_B3, SQ_C3, SQ_D3, SQ_E3, SQ_F3, SQ_G3, SQ_H3,
@@ -72,9 +74,9 @@ enum Direction : int {
     NORTH_WEST = NORTH + WEST
 };
 
-enum File : int { FILE_A, FILE_B, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FILE_H, FILE_NB };
+enum File : int8_t  { FILE_A, FILE_B, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FILE_H, FILE_NB };
 
-enum Rank : int { RANK_1, RANK_2, RANK_3, RANK_4, RANK_5, RANK_6, RANK_7, RANK_8, RANK_NB };
+enum Rank : int8_t  { RANK_1, RANK_2, RANK_3, RANK_4, RANK_5, RANK_6, RANK_7, RANK_8, RANK_NB };
 
 #define ENABLE_INCR_OPERATORS_ON(T)                          \
     inline T& operator++(T& d) { return d = T(int(d) + 1); } \
@@ -87,7 +89,7 @@ ENABLE_INCR_OPERATORS_ON(Rank)
 
 #undef ENABLE_INCR_OPERATORS_ON
 
-#ifdef _DEBUG
+#ifdef DEBUG
     #define ASSERT(n)                                                                      \
         do {                                                                               \
             if (!(n)) {                                                                    \
@@ -169,6 +171,8 @@ class Move {
     static constexpr Move make(Square from, Square to, PieceType pt = KNIGHT) {
         return Move(T + ((pt - KNIGHT) << 12) + (from << 6) + to);
     }
+
+    static constexpr Move none() { return Move(0); }
 
     constexpr Square from_sq() const { return Square((data >> 6) & 0x3F); }
 

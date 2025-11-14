@@ -17,10 +17,10 @@ build:
 	mkdir -p build
 
 $(TARGET): $(SRC) | build
-	$(CXX) -O2 $(SRC) -o $(TARGET)
+	$(CXX) -O3 -march=native -funroll-loops -DNDEBUG $(SRC) -o $(TARGET)
 
 $(DEBUG_TARGET): $(SRC) | build
-	$(CXX) -g -O0 -Wall -Wextra -Wshadow -Wcast-align -Wlogical-op -Wpedantic $(SRC) -o $(DEBUG_TARGET)
+	$(CXX) -g -O0 -Wall -Wextra -Wshadow -Wcast-align -Wlogical-op -Wpedantic -DDEBUG $(SRC) -o $(DEBUG_TARGET)
 
 clean:
 	del /Q build\chess.exe build\chess_debug.exe 2>nul || true
