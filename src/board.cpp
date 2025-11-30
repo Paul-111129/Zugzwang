@@ -77,6 +77,7 @@ void Board::reset() {
     epSquare = SQ_NONE;
     rule50 = 0;
     gamePly = 0;
+    ply = 0;
     castlingRights = NO_CASTLING;
     posKey = 0ULL;
 }
@@ -196,8 +197,12 @@ bool Board::is_repetition() const {
 bool Board::do_move(const Move& move) {
     const Square from = move.from_sq();
     const Square to = move.to_sq();
+    
+    ASSERT(is_ok(from));
+    ASSERT(is_ok(to));
 
     // save state
+    history[gamePly].move = move;
     history[gamePly].posKey = posKey;
     history[gamePly].rule50 = rule50;
     history[gamePly].epSquare = epSquare;
@@ -264,19 +269,28 @@ bool Board::do_move(const Move& move) {
     posKey ^= Zobrist::side;
 
     gamePly++;
+    ply++;
 
     if (is_in_check(~sideToMove)) {
-        undo_move(move);
+        undo_move();
         return false;
     }
     return true;
 }
 
-void Board::undo_move(const Move& move) {
+void Board::undo_move() {
     gamePly--;
+    ply--;
 
+    ASSERT(gamePly >= 0 && gamePly < MAX_MOVES);
+    ASSERT(ply >= 0 && ply < MAX_DEPTH);
+
+    const Move move = history[gamePly].move;
     const Square from = move.from_sq();
     const Square to = move.to_sq();
+    
+    ASSERT(is_ok(from));
+    ASSERT(is_ok(to));
 
     sideToMove = ~sideToMove;
 
@@ -326,7 +340,7 @@ void Board::perft(int depth) {
             continue;
         }
         perft(depth - 1);
-        undo_move(list.moves[i]);
+        undo_move();
     }
 }
 
@@ -348,7 +362,7 @@ void Board::perftTest(int depth) {
         }
         unsigned long long before = perftLealNodes;
         perft(depth - 1);
-        undo_move(move);
+        undo_move();
         std::cout << move << ": " << perftLealNodes - before << "\n";
     }
 

@@ -8,14 +8,9 @@ namespace ChessCpp {
 void MoveGen::generate_sliding_moves(const Board& board, MoveList& list) {
     const Color side = board.sideToMove;
 
-    static constexpr Piece pieceIdx[2][3] = {
-        {W_BISHOP, W_ROOK, W_QUEEN},
-        {B_BISHOP, B_ROOK, B_QUEEN}
-    };
-
-    for (int i = 0; i < 3; i++) {
-        for (int pieceNum = 0; pieceNum < board.pieceNb[pieceIdx[side][i]]; ++pieceNum) {
-            Square startSq = board.pieceList[pieceIdx[side][i]][pieceNum];
+    for (PieceType i = BISHOP; i < 3; ++i) {
+        for (int pieceNum = 0; pieceNum < board.pieceNb[i]; ++pieceNum) {
+            Square startSq = board.pieceList[i][pieceNum];
 
             Bitboard attacks = 0ULL;
             Bitboard occupancy = board.byColorBB[WHITE] | board.byColorBB[BLACK];
@@ -200,9 +195,19 @@ void MoveGen::generate_pseudo_moves(const Board& board, MoveList& list) {
     generate_king_moves(board, list);
 }
 
-void MoveGen::generate_legal_moves(const Board& board, MoveList& list) {
+bool MoveGen::is_move_legal(Board& board, const Move move) {
+    MoveList list;
     generate_pseudo_moves(board, list);
-
-    for (int i = 0; i < list.count; ++i) { }
+    for (int i = 0; i < list.count; ++i) {
+        if (!board.do_move(move)) {
+            continue;
+        }
+        board.undo_move();
+        if (list.moves[i] == move) {
+            return true;
+        }
+    }
+    return false;
 }
+
 }  // namespace ChessCpp

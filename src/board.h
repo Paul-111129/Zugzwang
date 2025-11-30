@@ -4,6 +4,7 @@
 #include <string>
 #include "types.h"
 #include "bitboard.h"
+#include "pvtable.h"
 #include "movegen.h"
 
 namespace ChessCpp {
@@ -15,6 +16,8 @@ namespace Zobrist {
 }  // namespace Zobrist
 
 struct StateInfo {
+    Move move;
+
     Square epSquare;
     int rule50;
     int castlingRights;
@@ -42,13 +45,18 @@ class Board {
     Bitboard byColorBB[COLOR_NB];
     int material[COLOR_NB];
 
+    int ply;
+    int gamePly;
+
     Square epSquare;
     int rule50;
-    int gamePly;
     int castlingRights;
     Key posKey;
 
     StateInfo history[MAX_PLIES];
+
+    PVTable pvTable;
+    Move pvArray[MAX_DEPTH];
 
     static void init_zobrist();
     void reset();
@@ -58,7 +66,7 @@ class Board {
     bool is_repetition() const;
 
     bool do_move(const Move& move);
-    void undo_move(const Move& move);
+    void undo_move();
 
     void perftTest(int depth);
 };

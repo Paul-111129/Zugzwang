@@ -14,6 +14,7 @@ constexpr auto START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -
 constexpr int MAX_MOVES = 256;
 constexpr int MAX_PLIES = 2048;
 constexpr int INFINITY = 30000;
+constexpr int MAX_DEPTH = 64;
 
 // clang-format off
 enum PieceType : int8_t {

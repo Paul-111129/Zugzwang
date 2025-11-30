@@ -20,7 +20,7 @@ int Search::alphaBeta(Board& board, int depth, int alpha, int beta) {
 
         foundMove = true;
         int score = -alphaBeta(board, depth - 1, -beta, -alpha);
-        board.undo_move(move);
+        board.undo_move();
 
         if (score >= beta)
             return beta;
