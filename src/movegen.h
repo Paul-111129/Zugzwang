@@ -8,7 +8,7 @@ class Board;
 class MoveGen {
   public:
     static bool IsSquareAttacked(const Board& board, Square sq, Color attacker);
-    static bool ISMoveLegal(Board& board, const Move move);
+    static bool IsMoveLegal(Board& board, const Move move);
     static void GeneratePseudoMoves(const Board& board, MoveList& list);
 
   private:

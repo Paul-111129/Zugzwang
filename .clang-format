@@ -47,7 +47,7 @@ AlignTrailingComments:
 AllowShortCaseLabelsOnASingleLine: true
 # AllowShortCompoundRequirementOnASingleLine: true
 # AllowShortEnumsOnASingleLine: true
-AllowShortFunctionsOnASingleLine: Inline
+# AllowShortFunctionsOnASingleLine: All
 # AllowShortIfStatementsOnASingleLine: Never
 # AllowShortLambdasOnASingleLine: All
 # AllowShortLoopsOnASingleLine: false

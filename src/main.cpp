@@ -24,7 +24,7 @@ static bool IsMoveStr(const std::string& str) {
     return true;
 }
 
-static Move ParseMove(std::string& str, Board& board) {
+static Move ParseMove(std::string_view str, Board& board) {
     Square from = MakeSquare(File(str[0] - 'a'), Rank(str[1] - '1'));
     Square to = MakeSquare(File(str[2] - 'a'), Rank(str[3] - '1'));
 
@@ -53,15 +53,15 @@ static Move ParseMove(std::string& str, Board& board) {
 int main() {
     using namespace Zugzwang;
 
-    Magics::Init();
-    Board::InitZobrist();
+    Bitboards::Init();
 
     Board board;
     MoveList list;
 
-    constexpr auto TEST_FEN = "r1bq2r1/b4pk1/p1pp1p2/1p2pP2/1P2P1PB/3P4/1PPQ2P1/R3K2R w 0 1";
-    board.ParseFen(START_FEN);
+    const char* TEST_FEN = "r1bq2r1/b4pk1/p1pp1p2/1p2pP2/1P2P1PB/3P4/1PPQ2P1/R3K2R w 0 1";
 
+    board.ParseFen(START_FEN);
+    
     std::string input;
 
     board.Print();
@@ -77,7 +77,7 @@ int main() {
             board.UnmakeMove();
             board.Print();
         } else if (input[0] == 'p') {
-            board.PerftTest(5);
+            board.PerftTest(6);
         } else if (IsMoveStr(input)) {
             Move move = ParseMove(input, board);
             if (move == Move::None()) {

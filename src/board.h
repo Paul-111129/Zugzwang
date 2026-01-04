@@ -7,8 +7,6 @@
 
 namespace Zugzwang {
 
-class MoveGen;
-
 namespace Zobrist {
 
 inline Key psq[PIECE_NB][SQUARE_NB];
@@ -29,6 +27,8 @@ struct StateInfo {
 
 class Board {
   public:
+    Board() { InitZobrist(); }
+
     Piece Pieces[SQUARE_NB];
     int PieceNumber[PIECE_NB];
     Square PieceList[PIECE_NB][10];
@@ -43,7 +43,6 @@ class Board {
     int CastlingRights;
     Key PosKey;
 
-    static void InitZobrist();
     void Reset();
     void ParseFen(const char* fenStr);
     void Print() const;
@@ -60,6 +59,7 @@ class Board {
 
     unsigned long long m_PerftLealNodes;
 
+    static void InitZobrist();
     void GeneratePosKey();
     void UpdateListsBitboards();
     void PutPiece(Piece piece, Square sq);

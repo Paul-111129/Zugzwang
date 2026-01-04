@@ -75,13 +75,9 @@ enum File : int8_t { FILE_A, FILE_B, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FIL
 
 enum Rank : int8_t { RANK_1, RANK_2, RANK_3, RANK_4, RANK_5, RANK_6, RANK_7, RANK_8, RANK_NB };
 
-#define ENABLE_INCR_OPERATORS_ON(T) \
-    inline T& operator++(T& d) {    \
-        return d = T(int(d) + 1);   \
-    }                               \
-    inline T& operator--(T& d) {    \
-        return d = T(int(d) - 1);   \
-    }
+#define ENABLE_INCR_OPERATORS_ON(T)                          \
+    inline T& operator++(T& d) { return d = T(int(d) + 1); } \
+    inline T& operator--(T& d) { return d = T(int(d) - 1); }
 
 ENABLE_INCR_OPERATORS_ON(PieceType)
 ENABLE_INCR_OPERATORS_ON(Square)
@@ -104,76 +100,37 @@ ENABLE_INCR_OPERATORS_ON(Rank)
 #define ASSERT(n) ((void)0)
 #endif
 
-constexpr Direction operator+(Direction d1, Direction d2) {
-    return Direction(int(d1) + int(d2));
-}
-constexpr Direction operator*(int i, Direction d) {
-    return Direction(i * int(d));
-}
+constexpr Direction operator+(Direction d1, Direction d2) { return Direction(int(d1) + int(d2)); }
+constexpr Direction operator*(int i, Direction d) { return Direction(i * int(d)); }
 
 // Additional operators to add a Direction to a Square
-constexpr Square operator+(Square s, Direction d) {
-    return Square(int(s) + int(d));
-}
-constexpr Square operator-(Square s, Direction d) {
-    return Square(int(s) - int(d));
-}
-inline Square& operator+=(Square& s, Direction d) {
-    return s = s + d;
-}
-inline Square& operator-=(Square& s, Direction d) {
-    return s = s - d;
-}
+constexpr Square operator+(Square s, Direction d) { return Square(int(s) + int(d)); }
+constexpr Square operator-(Square s, Direction d) { return Square(int(s) - int(d)); }
+inline Square& operator+=(Square& s, Direction d) { return s = s + d; }
+inline Square& operator-=(Square& s, Direction d) { return s = s - d; }
 
-// Toggle color
-constexpr Color operator~(Color c) {
-    return Color(c ^ BLACK);
-}
+constexpr Color operator~(Color c) { return Color(c ^ BLACK); }
 
-constexpr Square MakeSquare(File f, Rank r) {
-    return Square((r << 3) + f);
-}
+constexpr Square MakeSquare(File f, Rank r) { return Square((r << 3) + f); }
 
-constexpr Piece MakePiece(Color c, PieceType pt) {
-    return Piece((c << 3) + pt);
-}
+constexpr Piece MakePiece(Color c, PieceType pt) { return Piece((c << 3) + pt); }
 
-constexpr PieceType TypeOf(Piece pc) {
-    return PieceType(pc & 7);
-}
+constexpr PieceType TypeOf(Piece pc) { return PieceType(pc & 7); }
 
 inline Color ColorOf(Piece pc) {
     ASSERT(pc != NO_PIECE);
     return Color(pc >> 3);
 }
 
-constexpr bool IsOk(Square s) {
-    return s >= SQ_A1 && s <= SQ_H8;
-}
+constexpr bool IsOk(Square s) { return s >= SQ_A1 && s <= SQ_H8; }
 
-constexpr File FileOf(Square s) {
-    return File(s & 7);
-}
+constexpr File FileOf(Square s) { return File(s & 7); }
 
-constexpr Rank RankOf(Square s) {
-    return Rank(s >> 3);
-}
+constexpr Rank RankOf(Square s) { return Rank(s >> 3); }
 
-constexpr Square RelativeSquare(Color c, Square s) {
-    return Square(s ^ (c * 56));
-}
+constexpr Rank RelativeRank(Color c, Rank r) { return Rank(r ^ (c * 7)); }
 
-constexpr Rank RelativeRank(Color c, Rank r) {
-    return Rank(r ^ (c * 7));
-}
-
-constexpr Rank RelativeRank(Color c, Square s) {
-    return RelativeRank(c, RankOf(s));
-}
-
-constexpr Direction PawnPush(Color c) {
-    return c == WHITE ? NORTH : SOUTH;
-}
+constexpr Direction PawnPush(Color c) { return c == WHITE ? NORTH : SOUTH; }
 
 inline std::ostream& operator<<(std::ostream& os, const Square& sq) {
     os << char('a' + FileOf(sq)) << char('1' + RankOf(sq));
