@@ -2,215 +2,226 @@
 #include "bitboard.h"
 #include "board.h"
 #include "types.h"
-#include <iostream>
 
 namespace Zugzwang {
-    
-void MoveGen::GenerateSlidingMoves(const Board& board, MoveList& list) {
-    Color side = board.SideToMove;
-    Bitboard occupancy = board.ByColorBB[WHITE] | board.ByColorBB[BLACK];
+namespace {
 
-    static constexpr Piece pieceIdx[][3] = { { W_BISHOP, W_ROOK, W_QUEEN }, { B_BISHOP, B_ROOK, B_QUEEN } };
+void generate_sliding_moves(const Board& board, MoveList& list) {
+    const Color side = board.sideToMove;
+    const Bitboard occupancy = board.byColorBB[WHITE] | board.byColorBB[BLACK];
+
+    static constexpr Piece pieceIdx[2][3] = { { W_BISHOP, W_ROOK, W_QUEEN }, { B_BISHOP, B_ROOK, B_QUEEN } };
 
     for (int i = 0; i < 3; i++) {
-        Piece piece = pieceIdx[side][i];
-        int pieceNb = board.PieceNumber[piece];
+        const Piece piece = pieceIdx[side][i];
+        const int pieceNb = board.pieceNb[piece];
 
         for (int pieceIdx = 0; pieceIdx < pieceNb; ++pieceIdx) {
-            Square startSq = board.PieceList[piece][pieceIdx];
+            Square startSq = board.pieceList[piece][pieceIdx];
 
             Bitboard attacks = 0ULL;
 
             if (i == 0) {
-                attacks = Bitboards::GetBishopAttacks(startSq, occupancy);
+                attacks = Bitboards::GetAttacks<BISHOP>(startSq, occupancy);
             } else if (i == 1) {
-                attacks = Bitboards::GetRookAttacks(startSq, occupancy);
+                attacks = Bitboards::GetAttacks<ROOK>(startSq, occupancy);
             } else if (i == 2) {
-                attacks = Bitboards::GetQueenAttacks(startSq, occupancy);
+                attacks = Bitboards::GetAttacks<QUEEN>(startSq, occupancy);
             }
 
-            attacks &= ~board.ByColorBB[side];
+            attacks &= ~board.byColorBB[side];
 
             while (attacks) {
                 Square targetSq = PopLsb(attacks);
-                list.Moves[list.Count++] = Move(startSq, targetSq);
+                list.Insert(Move(startSq, targetSq));
             }
         }
     }
 }
 
-void MoveGen::GenerateKingMoves(const Board& board, MoveList& list) {
-    const Color color = board.SideToMove;
-    Square startSq = board.KingSquare[color];
+void generate_king_moves(const Board& board, MoveList& list) {
+    const Color color = board.sideToMove;
+    Square startSq = board.kingSquare[color];
 
-    Bitboard attacks = Bitboards::GetKingAttacks(startSq) & ~board.ByColorBB[color];
+    Bitboard attacks = Bitboards::GetAttacks<KING>(startSq) & ~board.byColorBB[color];
     while (attacks) {
         Square targetSq = PopLsb(attacks);
-        list.Moves[list.Count++] = Move(startSq, targetSq);
+        list.Insert(Move(startSq, targetSq));
     }
 
     // castling
     if (color == WHITE) {
-        if (board.CastlingRights & WHITE_OO) {
-            if (board.Pieces[SQ_F1] == NO_PIECE && board.Pieces[SQ_G1] == NO_PIECE) {
-                if (!IsSquareAttacked(board, SQ_E1, BLACK) && !IsSquareAttacked(board, SQ_F1, BLACK)) {
-                    list.Moves[list.Count++] = Move::Make<CASTLING>(SQ_E1, SQ_G1);
+        if (board.castlingRights & WHITE_OO) {
+            if (board.pieces[SQ_F1] == NO_PIECE && board.pieces[SQ_G1] == NO_PIECE) {
+                if (!MoveGen::IsSquareAttacked(board, SQ_E1, BLACK) &&
+                    !MoveGen::IsSquareAttacked(board, SQ_F1, BLACK)) {
+                    list.Insert(Move::Make<CASTLING>(SQ_E1, SQ_G1));
                 }
             }
         }
 
-        if (board.CastlingRights & WHITE_OOO) {
-            if (board.Pieces[SQ_D1] == NO_PIECE && board.Pieces[SQ_C1] == NO_PIECE &&
-                board.Pieces[SQ_B1] == NO_PIECE) {
-                if (!IsSquareAttacked(board, SQ_E1, BLACK) && !IsSquareAttacked(board, SQ_D1, BLACK)) {
-                    list.Moves[list.Count++] = Move::Make<CASTLING>(SQ_E1, SQ_C1);
+        if (board.castlingRights & WHITE_OOO) {
+            if (board.pieces[SQ_D1] == NO_PIECE && board.pieces[SQ_C1] == NO_PIECE &&
+                board.pieces[SQ_B1] == NO_PIECE) {
+                if (!MoveGen::IsSquareAttacked(board, SQ_E1, BLACK) &&
+                    !MoveGen::IsSquareAttacked(board, SQ_D1, BLACK)) {
+                    list.Insert(Move::Make<CASTLING>(SQ_E1, SQ_C1));
                 }
             }
         }
     } else {
-        if (board.CastlingRights & BLACK_OO) {
-            if (board.Pieces[SQ_F8] == NO_PIECE && board.Pieces[SQ_G8] == NO_PIECE) {
-                if (!IsSquareAttacked(board, SQ_E8, WHITE) && !IsSquareAttacked(board, SQ_F8, WHITE)) {
-                    list.Moves[list.Count++] = Move::Make<CASTLING>(SQ_E8, SQ_G8);
+        if (board.castlingRights & BLACK_OO) {
+            if (board.pieces[SQ_F8] == NO_PIECE && board.pieces[SQ_G8] == NO_PIECE) {
+                if (!MoveGen::IsSquareAttacked(board, SQ_E8, WHITE) &&
+                    !MoveGen::IsSquareAttacked(board, SQ_F8, WHITE)) {
+                    list.Insert(Move::Make<CASTLING>(SQ_E8, SQ_G8));
                 }
             }
         }
 
-        if (board.CastlingRights & BLACK_OOO) {
-            if (board.Pieces[SQ_D8] == NO_PIECE && board.Pieces[SQ_C8] == NO_PIECE &&
-                board.Pieces[SQ_B8] == NO_PIECE) {
-                if (!IsSquareAttacked(board, SQ_E8, WHITE) && !IsSquareAttacked(board, SQ_D8, WHITE)) {
-                    list.Moves[list.Count++] = Move::Make<CASTLING>(SQ_E8, SQ_C8);
+        if (board.castlingRights & BLACK_OOO) {
+            if (board.pieces[SQ_D8] == NO_PIECE && board.pieces[SQ_C8] == NO_PIECE &&
+                board.pieces[SQ_B8] == NO_PIECE) {
+                if (!MoveGen::IsSquareAttacked(board, SQ_E8, WHITE) &&
+                    !MoveGen::IsSquareAttacked(board, SQ_D8, WHITE)) {
+                    list.Insert(Move::Make<CASTLING>(SQ_E8, SQ_C8));
                 }
             }
         }
     }
 }
 
-void MoveGen::GenerateKnightMoves(const Board& board, MoveList& list) {
-    const Color color = board.SideToMove;
+void generate_knight_moves(const Board& board, MoveList& list) {
+    const Color color = board.sideToMove;
+    const Piece piece = MakePiece(color, KNIGHT);
+    const int pieceNb = board.pieceNb[piece];
 
-    for (int pieceNum = 0; pieceNum < board.PieceNumber[MakePiece(color, KNIGHT)]; ++pieceNum) {
-        Square startSq = board.PieceList[MakePiece(color, KNIGHT)][pieceNum];
-        Bitboard attacks = Bitboards::GetKnightAttacks(startSq) & ~board.ByColorBB[color];
+    for (int pieceIdx = 0; pieceIdx < pieceNb; ++pieceIdx) {
+        Square startSq = board.pieceList[piece][pieceIdx];
+        Bitboard attacks = Bitboards::GetAttacks<KNIGHT>(startSq) & ~board.byColorBB[color];
 
         while (attacks) {
             Square targetSq = PopLsb(attacks);
-            list.Moves[list.Count++] = Move(startSq, targetSq);
+            list.Insert(Move(startSq, targetSq));
         }
     }
 }
 
-void MoveGen::GeneratePawnMoves(const Board& board, MoveList& list) {
-    const Color color = board.SideToMove;
+void generate_pawn_moves(const Board& board, MoveList& list) {
+    const Color color = board.sideToMove;
+    const Piece pawn = MakePiece(color, PAWN);
+    const int pieceNb = board.pieceNb[pawn];
+
     const Rank startRank = RelativeRank(color, RANK_2);
     const Rank promoRank = RelativeRank(color, RANK_7);
 
-    for (int pieceIdx = 0; pieceIdx < board.PieceNumber[MakePiece(color, PAWN)]; pieceIdx++) {
-        const Square startSq = board.PieceList[MakePiece(color, PAWN)][pieceIdx];
+    auto add_promotions = [&](Square startSq, Square toSq) {
+        list.Insert(Move::Make<PROMOTION>(startSq, toSq, QUEEN));
+        list.Insert(Move::Make<PROMOTION>(startSq, toSq, ROOK));
+        list.Insert(Move::Make<PROMOTION>(startSq, toSq, BISHOP));
+        list.Insert(Move::Make<PROMOTION>(startSq, toSq, KNIGHT));
+    };
+
+    for (int pieceIdx = 0; pieceIdx < pieceNb; pieceIdx++) {
+        const Square startSq = board.pieceList[pawn][pieceIdx];
         const Rank rank = RankOf(startSq);
         const Square oneForward = startSq + PawnPush(color);
+
         ASSERT(IsOk(oneForward));
+
         // pushes
-        if (board.Pieces[oneForward] == NO_PIECE) {
+        if (board.pieces[oneForward] == NO_PIECE) {
             if (rank == promoRank) {
-                list.Moves[list.Count++] = Move::Make<PROMOTION>(startSq, oneForward, KNIGHT);
-                list.Moves[list.Count++] = Move::Make<PROMOTION>(startSq, oneForward, BISHOP);
-                list.Moves[list.Count++] = Move::Make<PROMOTION>(startSq, oneForward, ROOK);
-                list.Moves[list.Count++] = Move::Make<PROMOTION>(startSq, oneForward, QUEEN);
+                add_promotions(startSq, oneForward);
             } else {
                 const Square twoForward = startSq + 2 * PawnPush(color);
                 ASSERT(IsOk(twoForward));
 
-                list.Moves[list.Count++] = Move(startSq, oneForward);
-                if (rank == startRank && board.Pieces[twoForward] == NO_PIECE) {
-                    list.Moves[list.Count++] = Move(startSq, twoForward);
+                list.Insert(Move(startSq, oneForward));
+                if (rank == startRank && board.pieces[twoForward] == NO_PIECE) {
+                    list.Insert(Move(startSq, twoForward));
                 }
             }
         }
 
         // captures
-        Bitboard attacks = Bitboards::GetPawnAttacks(color, startSq) & board.ByColorBB[~color];
-        while (attacks) {
-            Square to = PopLsb(attacks);
+        const Bitboard pawnAtt = Bitboards::GetAttacks<PAWN>(startSq, 0, color);
+        Bitboard captures = pawnAtt & board.byColorBB[~color];
+
+        while (captures) {
+            Square to = PopLsb(captures);
             if (rank == promoRank) {
-                list.Moves[list.Count++] = Move::Make<PROMOTION>(startSq, to, KNIGHT);
-                list.Moves[list.Count++] = Move::Make<PROMOTION>(startSq, to, BISHOP);
-                list.Moves[list.Count++] = Move::Make<PROMOTION>(startSq, to, ROOK);
-                list.Moves[list.Count++] = Move::Make<PROMOTION>(startSq, to, QUEEN);
+                add_promotions(startSq, to);
             } else {
-                list.Moves[list.Count++] = Move(startSq, to);
+                list.Insert(Move(startSq, to));
             }
         }
 
         // en passant
-        if (board.EpSquare != SQ_NONE &&
-            (Bitboards::GetPawnAttacks(color, startSq) & (1ULL << board.EpSquare))) {
-            list.Moves[list.Count++] = Move::Make<EN_PASSANT>(startSq, board.EpSquare);
+        if (board.epSquare != SQ_NONE && (pawnAtt & (1ULL << board.epSquare))) {
+            list.Insert(Move::Make<EN_PASSANT>(startSq, board.epSquare));
         }
     }
 }
 
-bool MoveGen::IsSquareAttacked(const Board& board, Square sq, Color attacker) {
-    Bitboard sqBb = SquareBb(sq);
+} // namespace
 
-    for (int i = 0; i < board.PieceNumber[MakePiece(attacker, PAWN)]; ++i) {
-        if (Bitboards::GetPawnAttacks(attacker, board.PieceList[MakePiece(attacker, PAWN)][i]) & sqBb) {
+namespace MoveGen {
+
+bool IsSquareAttacked(const Board& board, Square sq, Color attacker) {
+    const Bitboard sqBb = SquareBb(sq);
+
+    Piece piece = MakePiece(attacker, PAWN);
+    for (int i = 0; i < board.pieceNb[piece]; ++i) {
+        if (Bitboards::GetAttacks<PAWN>(board.pieceList[piece][i], 0, attacker) & sqBb) {
             return true;
         }
     }
 
-    for (int i = 0; i < board.PieceNumber[MakePiece(attacker, KNIGHT)]; ++i) {
-        if (Bitboards::GetKnightAttacks(board.PieceList[MakePiece(attacker, KNIGHT)][i]) & sqBb) {
+    piece = MakePiece(attacker, KNIGHT);
+    for (int i = 0; i < board.pieceNb[piece]; ++i) {
+        if (Bitboards::GetAttacks<KNIGHT>(board.pieceList[piece][i]) & sqBb) {
             return true;
         }
     }
 
-    if (Bitboards::GetKingAttacks(board.KingSquare[attacker]) & sqBb) {
+    if (Bitboards::GetAttacks<KING>(board.kingSquare[attacker]) & sqBb) {
         return true;
     }
 
-    Bitboard occupied = board.ByColorBB[WHITE] | board.ByColorBB[BLACK];
-    for (int i = 0; i < board.PieceNumber[BISHOP + attacker * 8]; ++i) {
-        if (Bitboards::GetBishopAttacks(board.PieceList[BISHOP + attacker * 8][i], occupied) & sqBb) {
+    const Bitboard occupied = board.byColorBB[WHITE] | board.byColorBB[BLACK];
+
+    piece = MakePiece(attacker, BISHOP);
+    for (int i = 0; i < board.pieceNb[piece]; ++i) {
+        if (Bitboards::GetAttacks<BISHOP>(board.pieceList[piece][i], occupied) & sqBb) {
             return true;
         }
     }
 
-    for (int i = 0; i < board.PieceNumber[ROOK + attacker * 8]; ++i) {
-        if (Bitboards::GetRookAttacks(board.PieceList[ROOK + attacker * 8][i], occupied) & sqBb) {
+    piece = MakePiece(attacker, ROOK);
+    for (int i = 0; i < board.pieceNb[piece]; ++i) {
+        if (Bitboards::GetAttacks<ROOK>(board.pieceList[piece][i], occupied) & sqBb) {
             return true;
         }
     }
 
-    for (int i = 0; i < board.PieceNumber[QUEEN + attacker * 8]; ++i) {
-        if (Bitboards::GetQueenAttacks(board.PieceList[QUEEN + attacker * 8][i], occupied) & sqBb) {
+    piece = MakePiece(attacker, QUEEN);
+    for (int i = 0; i < board.pieceNb[piece]; ++i) {
+        if (Bitboards::GetAttacks<QUEEN>(board.pieceList[piece][i], occupied) & sqBb) {
             return true;
         }
     }
+
     return false;
 }
 
-void MoveGen::GeneratePseudoMoves(const Board& board, MoveList& list) {
-    GeneratePawnMoves(board, list);
-    GenerateSlidingMoves(board, list);
-    GenerateKnightMoves(board, list);
-    GenerateKingMoves(board, list);
+void GeneratePseudoMoves(const Board& board, MoveList& list) {
+    generate_pawn_moves(board, list);
+    generate_sliding_moves(board, list);
+    generate_knight_moves(board, list);
+    generate_king_moves(board, list);
 }
 
-bool MoveGen::IsMoveLegal(Board& board, const Move move) {
-    MoveList list;
-    GeneratePseudoMoves(board, list);
-    for (int i = 0; i < list.Count; ++i) {
-        if (!board.MakeMove(move)) {
-            continue;
-        }
-        board.UnmakeMove();
-        if (list.Moves[i] == move) {
-            return true;
-        }
-    }
-    return false;
-}
+} // namespace MoveGen
 
 } // namespace Zugzwang

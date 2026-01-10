@@ -4,33 +4,35 @@
 #include <cstdlib>
 #include <iomanip>
 #include <iostream>
+#include <string>
 
 namespace Zugzwang {
 
+// chess engine
 using Bitboard = uint64_t;
 using Key = uint64_t;
 
-constexpr const char* START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+constexpr auto START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 constexpr int MAX_MOVES = 256;
 constexpr int MAX_PLIES = 2048;
 
 // clang-format off
-enum PieceType : int8_t {
+enum PieceType {
     NO_PIECE_TYPE, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING,
     ALL_PIECES = 0,
     PIECE_TYPE_NB = 8
 };
 
-enum Piece : int8_t {
+enum Piece {
     NO_PIECE,
     W_PAWN = PAWN,     W_KNIGHT, W_BISHOP, W_ROOK, W_QUEEN, W_KING,
     B_PAWN = PAWN + 8, B_KNIGHT, B_BISHOP, B_ROOK, B_QUEEN, B_KING,
     PIECE_NB = 16
 };
 
-enum Color : int8_t { WHITE, BLACK, COLOR_NB = 2 };
+enum Color { WHITE, BLACK, COLOR_NB = 2 };
 
-enum CastlingRights : int8_t {
+enum CastlingRights {
     NO_CASTLING,
     WHITE_OO,
     WHITE_OOO = WHITE_OO << 1,
@@ -46,7 +48,7 @@ enum CastlingRights : int8_t {
     CASTLING_RIGHT_NB = 16
 };
 
-enum Square : int8_t {
+enum Square : int {
     SQ_A1, SQ_B1, SQ_C1, SQ_D1, SQ_E1, SQ_F1, SQ_G1, SQ_H1,
     SQ_A2, SQ_B2, SQ_C2, SQ_D2, SQ_E2, SQ_F2, SQ_G2, SQ_H2,
     SQ_A3, SQ_B3, SQ_C3, SQ_D3, SQ_E3, SQ_F3, SQ_G3, SQ_H3,
@@ -71,9 +73,9 @@ enum Direction : int {
     NORTH_WEST = NORTH + WEST
 };
 
-enum File : int8_t { FILE_A, FILE_B, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FILE_H, FILE_NB };
+enum File : int { FILE_A, FILE_B, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FILE_H, FILE_NB };
 
-enum Rank : int8_t { RANK_1, RANK_2, RANK_3, RANK_4, RANK_5, RANK_6, RANK_7, RANK_8, RANK_NB };
+enum Rank : int { RANK_1, RANK_2, RANK_3, RANK_4, RANK_5, RANK_6, RANK_7, RANK_8, RANK_NB };
 
 #define ENABLE_INCR_OPERATORS_ON(T)                          \
     inline T& operator++(T& d) { return d = T(int(d) + 1); } \
@@ -86,18 +88,18 @@ ENABLE_INCR_OPERATORS_ON(Rank)
 
 #undef ENABLE_INCR_OPERATORS_ON
 
-#ifdef DEBUG
+#ifdef NDEBUG
+#define ASSERT(n) ((void)0)
+#else
 #define ASSERT(n)                                                                      \
     do {                                                                               \
         if (!(n)) {                                                                    \
-            std::cout << "Assertion failed: " << #n << "\n";                           \
-            std::cout << "In file: " << __FILE__ << ", at line: " << __LINE__ << "\n"; \
+            std::cerr << "Assertion failed: " << #n << "\n";                           \
+            std::cerr << "In file: " << __FILE__ << ", at line: " << __LINE__ << "\n"; \
             std::cin.get();                                                            \
             std::exit(1);                                                              \
         }                                                                              \
     } while (0)
-#else
-#define ASSERT(n) ((void)0)
 #endif
 
 constexpr Direction operator+(Direction d1, Direction d2) { return Direction(int(d1) + int(d2)); }
@@ -109,6 +111,7 @@ constexpr Square operator-(Square s, Direction d) { return Square(int(s) - int(d
 inline Square& operator+=(Square& s, Direction d) { return s = s + d; }
 inline Square& operator-=(Square& s, Direction d) { return s = s - d; }
 
+// Toggle color
 constexpr Color operator~(Color c) { return Color(c ^ BLACK); }
 
 constexpr Square MakeSquare(File f, Rank r) { return Square((r << 3) + f); }
@@ -133,6 +136,11 @@ constexpr Rank RelativeRank(Color c, Rank r) { return Rank(r ^ (c * 7)); }
 constexpr Direction PawnPush(Color c) { return c == WHITE ? NORTH : SOUTH; }
 
 inline std::ostream& operator<<(std::ostream& os, const Square& sq) {
+    if (!IsOk(sq)) {
+        os << "none";
+        return os;
+    }
+
     os << char('a' + FileOf(sq)) << char('1' + RankOf(sq));
     return os;
 }
@@ -149,6 +157,7 @@ class Move {
 
   public:
     Move() = default;
+
     constexpr explicit Move(uint16_t d) : data(d) {}
 
     constexpr Move(Square from, Square to) : data((from << 6) + to) {}
@@ -158,20 +167,30 @@ class Move {
         return Move(T + ((pt - KNIGHT) << 12) + (from << 6) + to);
     }
 
-    static constexpr Move None() { return Move(0); }
+    constexpr Square FromSq() const {
+        ASSERT(IsOk());
+        return Square((data >> 6) & 0x3F);
+    }
 
-    constexpr Square FromSq() const { return Square((data >> 6) & 0x3F); }
-
-    constexpr Square ToSq() const { return Square(data & 0x3F); }
+    constexpr Square ToSq() const {
+        ASSERT(IsOk());
+        return Square(data & 0x3F);
+    }
 
     constexpr MoveType TypeOf() const { return MoveType(data & (3 << 14)); }
 
     constexpr PieceType PromotionType() const { return PieceType(((data >> 12) & 3) + KNIGHT); }
 
+    constexpr bool IsOk() const { return None().data != data; }
+
+    static constexpr Move None() { return Move(0); }
+
     constexpr bool operator==(const Move& m) const { return data == m.data; }
     constexpr bool operator!=(const Move& m) const { return data != m.data; }
 
-    friend std::ostream& operator<<(std::ostream& os, const Move& move) {
+    constexpr explicit operator bool() const { return data != 0; }
+
+    friend inline std::ostream& operator<<(std::ostream& os, const Move& move) {
         os << move.FromSq() << move.ToSq();
 
         if (move.TypeOf() == PROMOTION) {
@@ -189,15 +208,35 @@ class Move {
     }
 };
 
-struct MoveList {
-    Move Moves[MAX_MOVES];
-    int Count = 0;
+class MoveList {
+  private:
+    Move moves[MAX_MOVES];
+    int count = 0;
 
-    friend std::ostream& operator<<(std::ostream& os, const MoveList& list) {
-        for (int i = 0; i < list.Count; ++i) {
-            os << std::setw(2) << i + 1 << ": " << list.Moves[i] << "\n";
+  public:
+    void Insert(Move move) {
+        ASSERT(count < MAX_MOVES);
+        moves[count++] = move;
+    }
+
+    Move& operator[](int i) {
+        ASSERT(i >= 0 && i < count);
+        return moves[i];
+    }
+
+    // For non-const range-based for loops
+    inline Move* begin() { return moves; }
+    inline Move* end() { return moves + count; }
+
+    // For const range-based for loops
+    inline const Move* begin() const { return moves; }
+    inline const Move* end() const { return moves + count; }
+
+    friend inline std::ostream& operator<<(std::ostream& os, const MoveList& list) {
+        for (int i = 0; i < list.count; ++i) {
+            os << std::setw(2) << i + 1 << ": " << list.moves[i] << "\n";
         }
-        os << "Total: " << list.Count << " moves.\n";
+        os << "Total: " << list.count << " moves.\n";
         return os;
     }
 };

@@ -1,34 +1,36 @@
 #pragma once
 
 #include "types.h"
+#include <bit>
 
 namespace Zugzwang {
 
 class Bitboards {
   public:
-    static void Init();
+    Bitboards() = delete;
 
-    static Bitboard GetRookAttacks(Square square, Bitboard occupancy) {
-        return RookAttackTable[square][((occupancy & RookMasks[square]) * RookMagics[square])
-                                       >> RookShifts[square]];
-    }
-    static Bitboard GetBishopAttacks(Square square, Bitboard occupancy) {
-        return BishopAttackTable[square][((occupancy & BishopMasks[square]) * BishopMagics[square])
-                                         >> BishopShifts[square]];
-    }
-    static Bitboard GetQueenAttacks(Square square, Bitboard occupancy) {
-        return GetRookAttacks(square, occupancy) | GetBishopAttacks(square, occupancy);
-    }
+    static void init();
 
-    static Bitboard GetKnightAttacks(Square square) { return KnightAttacks[square]; }
-    static Bitboard GetKingAttacks(Square square) { return KingAttacks[square]; }
-    static Bitboard GetPawnAttacks(Color color, Square square) {
-        return PawnAttacks[color][square];
+    template <PieceType P>
+    static Bitboard GetAttacks(Square square, Bitboard occupancy = 0, Color color = WHITE) {
+        if constexpr (P == ROOK) {
+            return RookAttackTable[square][((occupancy & RookMasks[square]) * RookMagics[square]) >>
+                RookShifts[square]];
+        } else if constexpr (P == BISHOP) {
+            return BishopAttackTable[square][((occupancy & BishopMasks[square]) * BishopMagics[square]) >>
+                BishopShifts[square]];
+        } else if constexpr (P == QUEEN) {
+            return GetAttacks<ROOK>(square, occupancy) | GetAttacks<BISHOP>(square, occupancy);
+        } else if constexpr (P == PieceType::KNIGHT) {
+            return KnightAttacks[square];
+        } else if constexpr (P == PieceType::KING) {
+            return KingAttacks[square];
+        } else if constexpr (P == PieceType::PAWN) {
+            return PawnAttacks[color][square];
+        }
     }
 
   private:
-    Bitboards() {}
-
     static const int RookShifts[SQUARE_NB];
     static const int BishopShifts[SQUARE_NB];
     static const Bitboard RookMagics[SQUARE_NB];
@@ -48,27 +50,22 @@ class Bitboards {
     static Bitboard CreateBishopBitboard(Square square, Bitboard blockBitboard);
 };
 
-constexpr Bitboard SquareBb(Square s) {
+inline Bitboard SquareBb(Square s) {
     ASSERT(IsOk(s));
     return (1ULL << s);
 }
 
 inline Square PopLsb(Bitboard& b) {
     ASSERT(b);
-    Square index = Square(__builtin_ctzll(b));
+    Square index = Square(std::countr_zero(b));
     b &= (b - 1);
     return index;
 }
 
-inline Square PopCount(Bitboard b) {
-    return Square(__builtin_popcountll(b));
-}
+constexpr Square PopCount(Bitboard b) { return Square(std::popcount(b)); }
 
-inline void SetBit(Bitboard& b, Square sq) {
-    b |= (1ULL << sq);
-}
+constexpr void SetBit(Bitboard& b, Square sq) { b |= (1ULL << sq); }
 
-inline void ClearBit(Bitboard& b, Square sq) {
-    b &= ~(1ULL << sq);
-}
+constexpr void ClearBit(Bitboard& b, Square sq) { b &= ~(1ULL << sq); }
+
 } // namespace Zugzwang

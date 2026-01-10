@@ -1,6 +1,4 @@
 *.exe
 *.o
 .vscode/
-bin/
-obj/
-*.make
+build/

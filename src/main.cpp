@@ -1,4 +1,5 @@
 #include "board.h"
+#include "movegen.h"
 #include "types.h"
 #include <iostream>
 
@@ -31,8 +32,7 @@ static Move ParseMove(std::string_view str, Board& board) {
     MoveList list;
     MoveGen::GeneratePseudoMoves(board, list);
 
-    for (int i = 0; i < list.Count; ++i) {
-        Move& move = list.Moves[i];
+    for (const auto move : list) {
         if (move.FromSq() == from && move.ToSq() == to) {
             if (move.TypeOf() == PROMOTION) {
                 PieceType type = move.PromotionType();
@@ -53,15 +53,15 @@ static Move ParseMove(std::string_view str, Board& board) {
 int main() {
     using namespace Zugzwang;
 
-    Bitboards::Init();
+    Bitboards::init();
 
     Board board;
     MoveList list;
 
-    const char* TEST_FEN = "r1bq2r1/b4pk1/p1pp1p2/1p2pP2/1P2P1PB/3P4/1PPQ2P1/R3K2R w 0 1";
+    const char* TEST_FEN = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1";
 
-    board.ParseFen(START_FEN);
-    
+    board.ParseFen(TEST_FEN);
+
     std::string input;
 
     board.Print();
@@ -74,10 +74,10 @@ int main() {
         if (input[0] == 'q') {
             break;
         } else if (input[0] == 't') {
-            board.UnmakeMove();
+            // board.UnmakeMove(move);
             board.Print();
         } else if (input[0] == 'p') {
-            board.PerftTest(6);
+            board.PerftTest(5);
         } else if (IsMoveStr(input)) {
             Move move = ParseMove(input, board);
             if (move == Move::None()) {

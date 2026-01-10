@@ -1,70 +1,66 @@
 #pragma once
 
 #include "bitboard.h"
-#include "movegen.h"
 #include "types.h"
-#include <string>
+#include <array>
 
 namespace Zugzwang {
-
 namespace Zobrist {
 
-inline Key psq[PIECE_NB][SQUARE_NB];
+inline Key psq[PIECE_NB][SQUARE_NB]; // psq[NO_PIECE] for en passant
 inline Key castling[CASTLING_RIGHT_NB];
 inline Key side;
 
 } // namespace Zobrist
 
 struct StateInfo {
-    Move Move;
-
-    Square EpSquare;
-    int FiftyMoveCount;
-    int CastlingRights;
-    Piece Captured;
-    Key PosKey;
+    Square epSquare;
+    int rule50;
+    int castlingRights;
+    Piece captured;
+    Key posKey;
 };
 
 class Board {
   public:
+    std::array<Piece, SQUARE_NB> pieces;
+    int pieceNb[PIECE_NB];
+    Square pieceList[PIECE_NB][10];
+    Square kingSquare[COLOR_NB];
+    Color sideToMove;
+    Bitboard byColorBB[COLOR_NB];
+
+    Square epSquare;
+    int rule50;
+    int gamePly;
+    int castlingRights;
+    Key posKey;
+
     Board() { InitZobrist(); }
 
-    Piece Pieces[SQUARE_NB];
-    int PieceNumber[PIECE_NB];
-    Square PieceList[PIECE_NB][10];
-    Square KingSquare[COLOR_NB];
-    Color SideToMove;
-    Bitboard ByColorBB[COLOR_NB];
-
-    int GamePly;
-
-    Square EpSquare;
-    int FiftyMoveCount;
-    int CastlingRights;
-    Key PosKey;
-
-    void Reset();
     void ParseFen(const char* fenStr);
-    void Print() const;
-    bool IsInCheck(Color color) const;
-    bool IsRepetition() const;
 
     bool MakeMove(const Move& move);
-    void UnmakeMove();
+    void UnmakeMove(const Move& move);
 
-    void PerftTest(int depth);
+    void Print() const;
+
+    uint64_t PerftTest(int depth);
 
   private:
-    StateInfo m_History[MAX_PLIES];
+    uint64_t perftLealNodes;
 
-    unsigned long long m_PerftLealNodes;
+    StateInfo history[MAX_PLIES];
 
-    static void InitZobrist();
-    void GeneratePosKey();
-    void UpdateListsBitboards();
+    void InitZobrist();
+
     void PutPiece(Piece piece, Square sq);
-    void RemoveRiece(Square sq);
+    void RemovePiece(Square sq);
     void MovePiece(Square from, Square to);
+
+    void GeneratePosKey();
+    void Reset();
+    void UpdateListsBitboards();
     void Perft(int depth);
 };
 
