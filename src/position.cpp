@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "bitboard.h"
-#include "board.h"
 #include "movegen.h"
+#include "position.h"
 
 namespace Zugzwang {
 namespace {
@@ -123,7 +123,6 @@ void Position::reset() {
     }
 
     byColorBB[WHITE] = byColorBB[BLACK] = 0ULL;
-    kingSquare[WHITE] = kingSquare[BLACK] = SQ_NONE;
     sideToMove = WHITE;
     epSquare = SQ_NONE;
     rule50 = 0;
@@ -166,12 +165,6 @@ void Position::ParseFen(const std::string& fen) {
             if (p) {
                 idx = p - PieceToChar;
                 board[sq] = Piece(idx);
-                if (Piece(idx) == W_KING) {
-                    kingSquare[WHITE] = sq;
-                }
-                if (Piece(idx) == B_KING) {
-                    kingSquare[BLACK] = sq;
-                }
                 ++sq;
             }
         }
@@ -258,11 +251,6 @@ bool Position::MakeMove(const Move& move) {
         putPiece(MakePiece(sideToMove, move.PromotionType()), to);
     }
 
-    // update king square (if moved)
-    if (TypeOf(board[to]) == KING) {
-        kingSquare[sideToMove] = to;
-    }
-
     // new en-passant target (from a double pawn push)
     epSquare = SQ_NONE;
     if (TypeOf(board[to]) == PAWN && std::abs(RankOf(from) - RankOf(to)) == 2) {
@@ -283,7 +271,7 @@ bool Position::MakeMove(const Move& move) {
 
     gamePly++;
 
-    if (MoveGen::IsSquareAttacked(*this, kingSquare[~sideToMove], sideToMove)) {
+    if (MoveGen::IsSquareAttacked(*this, square<KING>(~sideToMove), sideToMove)) {
         UnmakeMove(move);
         return false;
     }
@@ -319,10 +307,6 @@ void Position::UnmakeMove(const Move& move) {
 
     if (history[gamePly].captured != NO_PIECE) {
         putPiece(history[gamePly].captured, to);
-    }
-
-    if (TypeOf(board[from]) == KING) {
-        kingSquare[sideToMove] = from;
     }
 
     epSquare = history[gamePly].epSquare;

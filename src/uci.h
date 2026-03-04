@@ -1,6 +1,6 @@
 #pragma once
 
-#include "board.h"
+#include "position.h"
 #include <iosfwd>
 #include <string_view>
 

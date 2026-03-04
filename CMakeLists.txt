@@ -8,13 +8,13 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(SOURCES
     src/main.cpp
     src/bitboard.cpp
-    src/board.cpp
     src/movegen.cpp
+    src/position.cpp
     src/uci.cpp
 
     src/bitboard.h
-    src/board.h
     src/movegen.h
+    src/position.h
     src/uci.h
     src/types.h
 

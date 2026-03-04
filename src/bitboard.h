@@ -27,13 +27,18 @@ constexpr Bitboard& operator^=(Bitboard& b, Square s) { return b ^= SquareBb(s);
 
 constexpr Bitboard operator|(Square s1, Square s2) { return SquareBb(s1) | s2; }
 
+inline Square Lsb(Bitboard b) {
+    assert(b != 0);
+    return static_cast<Square>(std::countr_zero(b));
+}
+
 inline Square PopLsb(Bitboard& b) {
     assert(b);
-    Square index = Square(std::countr_zero(b));
+    Square index = Square(Lsb(b));
     b &= (b - 1);
     return index;
 }
 
-constexpr Square PopCount(Bitboard b) { return Square(std::popcount(b)); }
+constexpr int Popcount(Bitboard b) { return std::popcount(b); }
 
 } // namespace Zugzwang

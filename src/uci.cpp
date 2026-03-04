@@ -53,7 +53,7 @@ void UCIEngine::Loop() {
             std::cout << "readyok\n";
         } else if (token == "position") {
             position(is);
-            board.Print();
+            // board.Print();
         } else if (token == "go") {
             go(is);
         } else if (token == "quit") {

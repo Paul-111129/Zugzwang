@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "bitboard.h"
-#include "board.h"
 #include "movegen.h"
+#include "position.h"
 
 namespace Zugzwang {
 namespace {
@@ -16,11 +16,11 @@ template <Color Us, PieceType Pt>
 void GenerateMoves(const Position& pos, MoveList& list, Bitboard target) {
     static_assert(Pt != KING && Pt != PAWN, "Unsupported piece type in GenerateMoves()");
 
-    Bitboard bb = pos.byTypeBB[Pt] & pos.byColorBB[Us];
+    Bitboard bb = pos.Pieces(Us, Pt);
 
     while (bb) {
         Square from = PopLsb(bb);
-        Bitboard b = Bitboards::GetAttacks<Pt>(from, pos.byTypeBB[ALL_PIECES]) & target;
+        Bitboard b = Bitboards::GetAttacks<Pt>(from, pos.Pieces()) & target;
 
         SplatMoves(list, from, b);
     }
@@ -29,8 +29,6 @@ void GenerateMoves(const Position& pos, MoveList& list, Bitboard target) {
 template <Color Us>
 void GeneratePawnMoves(const Position& pos, MoveList& list) {
     constexpr Piece pawn = MakePiece(Us, PAWN);
-    const int pieceNb = pos.pieceNb[pawn];
-
     constexpr Rank startRank = RelativeRank(Us, RANK_2);
     constexpr Rank promoRank = RelativeRank(Us, RANK_7);
 
@@ -41,7 +39,7 @@ void GeneratePawnMoves(const Position& pos, MoveList& list) {
         list.Insert(Move::Make<PROMOTION>(startSq, toSq, KNIGHT));
     };
 
-    Bitboard bb = pos.byTypeBB[PAWN] & pos.byColorBB[Us];
+    Bitboard bb = pos.Pieces(Us, PAWN);
 
     while (bb) {
         Square from = PopLsb(bb);
@@ -51,7 +49,7 @@ void GeneratePawnMoves(const Position& pos, MoveList& list) {
         assert(IsOk(oneForward));
 
         // pushes
-        if (pos.board[oneForward] == NO_PIECE) {
+        if (pos.PieceOn(oneForward) == NO_PIECE) {
             if (rank == promoRank) {
                 addPromotions(from, oneForward);
             } else {
@@ -59,7 +57,7 @@ void GeneratePawnMoves(const Position& pos, MoveList& list) {
                 assert(IsOk(twoForward));
 
                 list.Insert(Move(from, oneForward));
-                if (rank == startRank && pos.board[twoForward] == NO_PIECE) {
+                if (rank == startRank && pos.PieceOn(twoForward) == NO_PIECE) {
                     list.Insert(Move(from, twoForward));
                 }
             }
@@ -67,7 +65,7 @@ void GeneratePawnMoves(const Position& pos, MoveList& list) {
 
         // captures
         const Bitboard pawnAtt = Bitboards::GetAttacks<PAWN>(from, 0, Us);
-        Bitboard captures = pawnAtt & pos.byColorBB[~Us];
+        Bitboard captures = pawnAtt & pos.Pieces(~Us);
 
         while (captures) {
             Square to = PopLsb(captures);
@@ -79,23 +77,23 @@ void GeneratePawnMoves(const Position& pos, MoveList& list) {
         }
 
         // en passant
-        if (pos.epSquare != SQ_NONE && (pawnAtt & (1ULL << pos.epSquare))) {
-            list.Insert(Move::Make<EN_PASSANT>(from, pos.epSquare));
+        if (pos.EpSuare() != SQ_NONE && (pawnAtt & (1ULL << pos.EpSuare()))) {
+            list.Insert(Move::Make<EN_PASSANT>(from, pos.EpSuare()));
         }
     }
 }
 
 template <Color Us>
 void GenerateKingMoves(const Position& pos, MoveList& list) {
-    Square startSq = pos.kingSquare[Us];
+    Square startSq = pos.square<KING>(Us);
 
-    Bitboard attacks = Bitboards::GetAttacks<KING>(startSq) & ~pos.byColorBB[Us];
+    Bitboard attacks = Bitboards::GetAttacks<KING>(startSq) & ~pos.Pieces(Us);
     SplatMoves(list, startSq, attacks);
 
     // castling
     if constexpr (Us == WHITE) {
-        if (pos.castlingRights & WHITE_OO) {
-            if (pos.board[SQ_F1] == NO_PIECE && pos.board[SQ_G1] == NO_PIECE) {
+        if (pos.CanCastle(WHITE_OO)) {
+            if (pos.PieceOn(SQ_F1) == NO_PIECE && pos.PieceOn(SQ_G1) == NO_PIECE) {
                 if (!MoveGen::IsSquareAttacked(pos, SQ_E1, BLACK) &&
                     !MoveGen::IsSquareAttacked(pos, SQ_F1, BLACK)) {
                     list.Insert(Move::Make<CASTLING>(SQ_E1, SQ_G1));
@@ -103,9 +101,9 @@ void GenerateKingMoves(const Position& pos, MoveList& list) {
             }
         }
 
-        if (pos.castlingRights & WHITE_OOO) {
-            if (pos.board[SQ_D1] == NO_PIECE && pos.board[SQ_C1] == NO_PIECE &&
-                pos.board[SQ_B1] == NO_PIECE) {
+        if (pos.CanCastle(WHITE_OOO)) {
+            if (pos.PieceOn(SQ_D1) == NO_PIECE && pos.PieceOn(SQ_C1) == NO_PIECE &&
+                pos.PieceOn(SQ_B1) == NO_PIECE) {
                 if (!MoveGen::IsSquareAttacked(pos, SQ_E1, BLACK) &&
                     !MoveGen::IsSquareAttacked(pos, SQ_D1, BLACK)) {
                     list.Insert(Move::Make<CASTLING>(SQ_E1, SQ_C1));
@@ -113,8 +111,8 @@ void GenerateKingMoves(const Position& pos, MoveList& list) {
             }
         }
     } else {
-        if (pos.castlingRights & BLACK_OO) {
-            if (pos.board[SQ_F8] == NO_PIECE && pos.board[SQ_G8] == NO_PIECE) {
+        if (pos.CanCastle(BLACK_OO)) {
+            if (pos.PieceOn(SQ_F8) == NO_PIECE && pos.PieceOn(SQ_G8) == NO_PIECE) {
                 if (!MoveGen::IsSquareAttacked(pos, SQ_E8, WHITE) &&
                     !MoveGen::IsSquareAttacked(pos, SQ_F8, WHITE)) {
                     list.Insert(Move::Make<CASTLING>(SQ_E8, SQ_G8));
@@ -122,9 +120,9 @@ void GenerateKingMoves(const Position& pos, MoveList& list) {
             }
         }
 
-        if (pos.castlingRights & BLACK_OOO) {
-            if (pos.board[SQ_D8] == NO_PIECE && pos.board[SQ_C8] == NO_PIECE &&
-                pos.board[SQ_B8] == NO_PIECE) {
+        if (pos.CanCastle(BLACK_OOO)) {
+            if (pos.PieceOn(SQ_D8) == NO_PIECE && pos.PieceOn(SQ_C8) == NO_PIECE &&
+                pos.PieceOn(SQ_B8) == NO_PIECE) {
                 if (!MoveGen::IsSquareAttacked(pos, SQ_E8, WHITE) &&
                     !MoveGen::IsSquareAttacked(pos, SQ_D8, WHITE)) {
                     list.Insert(Move::Make<CASTLING>(SQ_E8, SQ_C8));
@@ -136,7 +134,7 @@ void GenerateKingMoves(const Position& pos, MoveList& list) {
 
 template <Color Us>
 void GeneratePseudoMoves(const Position& pos, MoveList& list) {
-    const Bitboard target = ~pos.byColorBB[Us];
+    const Bitboard target = ~pos.Pieces(Us);
 
     GeneratePawnMoves<Us>(pos, list);
     GenerateMoves<Us, KNIGHT>(pos, list, target);
@@ -151,28 +149,28 @@ void GeneratePseudoMoves(const Position& pos, MoveList& list) {
 namespace MoveGen {
 
 bool IsSquareAttacked(const Position& pos, Square sq, Color attacker) {
-    const Bitboard attackers = pos.byColorBB[attacker];
-    const Bitboard occ = pos.byTypeBB[ALL_PIECES];
+    const Bitboard attackers = pos.Pieces(attacker);
+    const Bitboard occ = pos.Pieces();
 
-    Bitboard bishops = pos.byTypeBB[BISHOP] | pos.byTypeBB[QUEEN];
+    Bitboard bishops = pos.Pieces(BISHOP, QUEEN);
     if (Bitboards::GetAttacks<BISHOP>(sq, occ) & attackers & bishops) {
         return true;
     }
 
-    Bitboard rooks = pos.byTypeBB[ROOK] | pos.byTypeBB[QUEEN];
+    Bitboard rooks = pos.Pieces(ROOK, QUEEN);
     if (Bitboards::GetAttacks<ROOK>(sq, occ) & attackers & rooks) {
         return true;
     }
 
-    if (Bitboards::GetAttacks<KNIGHT>(sq) & attackers & pos.byTypeBB[KNIGHT]) {
+    if (Bitboards::GetAttacks<KNIGHT>(sq) & attackers & pos.Pieces(KNIGHT)) {
         return true;
     }
 
-    if (Bitboards::GetAttacks<PAWN>(sq, 0, ~attacker) & attackers & pos.byTypeBB[PAWN]) {
+    if (Bitboards::GetAttacks<PAWN>(sq, 0, ~attacker) & attackers & pos.Pieces(PAWN)) {
         return true;
     }
 
-    if (Bitboards::GetAttacks<KING>(sq) & attackers & pos.byTypeBB[KING]) {
+    if (Bitboards::GetAttacks<KING>(sq) & attackers & pos.Pieces(KING)) {
         return true;
     }
 
@@ -180,8 +178,8 @@ bool IsSquareAttacked(const Position& pos, Square sq, Color attacker) {
 }
 
 void GeneratePseudo(const Position& pos, MoveList& list) {
-    pos.sideToMove == WHITE ? GeneratePseudoMoves<WHITE>(pos, list)
-                            : GeneratePseudoMoves<BLACK>(pos, list);
+    pos.SideToMove() == WHITE ? GeneratePseudoMoves<WHITE>(pos, list)
+                              : GeneratePseudoMoves<BLACK>(pos, list);
 }
 
 } // namespace MoveGen
